@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Gestion des réservations</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <header>
+            <div class="header-content">
+                <h1>Tableau de bord</h1>
+                <button onclick="logout()" class="logout-btn">Déconnexion</button>
+            </div>
+            <div class="stats">
+                <div class="stat-box">
+                    <h3>Places totales</h3>
+                    <p id="totalPlaces">-</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Réservations</h3>
+                    <p id="totalReservations">-</p>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="guest-list">
+                <h2>Liste des invités</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Téléphone</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="guestList">
+                        <!-- La liste des invités sera injectée ici -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Charger les données du dashboard au chargement de la page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardData();
+        });
+
+        // Fonction de déconnexion
+        async function logout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    window.location.href = '/admin/login.html';
+                } else {
+                    console.error('Erreur lors de la déconnexion');
+                }
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        }
+
+        // Charger les données du dashboard
+        async function loadDashboardData() {
+            try {
+                // Charger les statistiques
+                const statsResponse = await fetch('/api/admin/event/stats');
+                if (statsResponse.status === 401) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                const stats = await statsResponse.json();
+                document.getElementById('totalPlaces').textContent = stats.totalPlaces;
+                document.getElementById('totalReservations').textContent = 
+                    `${stats.reservations}/${stats.totalPlaces}`;
+
+                // Charger la liste des invités
+                const guestsResponse = await fetch('/api/admin/guests');
+                if (guestsResponse.status === 401) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                const guests = await guestsResponse.json();
+                displayGuests(guests);
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+                window.location.href = '/admin/login.html';
+            }
+        }
+
+        // Afficher la liste des invités
+        function displayGuests(guests) {
+            const guestList = document.getElementById('guestList');
+            guestList.innerHTML = guests.map(guest => `
+                <tr>
+                    <td>${guest.name}</td>
+                    <td>${guest.email}</td>
+                    <td>${guest.phone || '-'}</td>
+                    <td>${guest.confirmed ? 'Confirmé' : 'En attente'}</td>
+                    <td class="actions">
+                        ${!guest.confirmed ? 
+                            `<button class="confirm-btn" onclick="confirmGuest(${guest.id})">Confirmer</button>` : 
+                            ''
+                        }
+                        <button class="delete-btn" onclick="deleteGuest(${guest.id})">Supprimer</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Confirmer un invité
+        async function confirmGuest(id) {
+            try {
+                const response = await fetch(`/api/admin/guests/${id}/confirm`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+
+                if (response.ok) {
+                    loadDashboardData();
+                }
+            } catch (error) {
+                console.error('Erreur lors de la confirmation:', error);
+            }
+        }
+
+        // Supprimer un invité
+        async function deleteGuest(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/guests/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+
+                if (response.ok) {
+                    loadDashboardData();
+                }
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+            }
+        }
+    </script>
+</body>
+</html>
