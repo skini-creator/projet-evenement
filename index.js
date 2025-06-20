@@ -1,51 +1,28 @@
-import express from 'express';
-import session from 'express-session';
-// path et fileURLToPath ne sont plus nécessaires si vous ne servez plus de fichiers locaux directement
-// import path from 'path';
-// import { fileURLToPath } from 'url';
+// index.js (version CommonJS)
 
-import eventRoutes from './src/routes/eventRoutes.js';
-import guestRoutes from './src/routes/guestRoutes.js';
-import authRoutes from './src/routes/authRoutes.js';
-import { authMiddleware } from './src/middlewares/auth.js';
+const express = require('express'); // REMPLACE import express from 'express';
+const session = require('express-session'); // REMPLACE import session from 'express-session';
+// const path = require('path'); // Supprimez si non utilisé
+// const { fileURLToPath } = require('url'); // Supprimez si non utilisé
 
-// const __filename = fileURLToPath(import.meta.url); // Plus nécessaire
-// const __dirname = path.dirname(__filename); // Plus nécessaire
+// Remplacez les imports de vos modules locaux par require()
+// ET IMPORTANT : Supprimez le ".js" pour les fichiers locaux si vous n'avez pas de configuration spécifique
+// de résolution d'extension pour CommonJS. Node.js les trouvera sans le .js dans CommonJS.
+// Cependant, il est plus sûr de laisser le .js pour la clarté si les fichiers sont vraiment .js
+const eventRoutes = require('./src/routes/eventRoutes.js');
+const guestRoutes = require('./src/routes/guestRoutes.js');
+const authRoutes = require('./src/routes/authRoutes.js');
+const { authMiddleware } = require('./src/middlewares/auth.js');
+
+
+// Supprimez ces lignes si vous ne les utilisez plus après avoir retiré les res.sendFile
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Configuration des sessions
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-fallback-secret-key', // Utiliser une variable d'environnement
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // Mettre à true si vous utilisez HTTPS
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 heures
-    }
-}));
-
-// Middleware pour parser le JSON
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// AUCUNE LIGNE app.use(express.static(...)) ici !
-// AUCUNE ROUTE app.get('/', ...) ou app.get('/admin/login.html', ...) qui envoie des fichiers HTML.
-
-// Routes API publiques
-app.use('/api/auth', authRoutes);
-app.use('/api/event', eventRoutes);
-app.use('/api/guests', guestRoutes);
-
-// Routes admin protégées (assurez-vous que vos routes sont /api/admin/guests et non /admin/guests)
-app.use('/api/admin/guests', authMiddleware, guestRoutes);
-app.use('/api/admin/event', authMiddleware, eventRoutes);
-
-// Gestion des erreurs 404 pour les routes API non trouvées par Express
-app.use((req, res) => {
-    res.status(404).send('API endpoint not found.'); // Message plus spécifique
-});
+// Le reste de votre configuration Express reste le même
+// ... (configuration des sessions, middlewares, routes API) ...
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
